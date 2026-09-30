@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.17"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python 3.14
+      - run: uv run --locked ruff check . ../scripts
+      - run: uv run --locked ruff format --check . ../scripts
+      - run: uv run --locked mypy app tests scripts ../scripts/bootstrap_env.py
+      - run: uv run --locked pytest -m "not integration"
+      - name: Generate isolated test credentials
+        run: uv run --locked python ../scripts/bootstrap_env.py
+      - name: Validate Compose
+        working-directory: .
+        run: docker compose config --quiet
+      - name: Start infrastructure
+        working-directory: .
+        run: docker compose up --build --detach --wait --wait-timeout 180
+      - name: Infrastructure smoke checks
+        run: uv run --locked python -m scripts.smoke
+      - name: Integration tests
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+        run: uv run --locked pytest -m integration
+      - name: Infrastructure status
+        if: always()
+        working-directory: .
+        run: docker compose ps --all
+      - name: Stop CI infrastructure
+        if: always()
+        working-directory: .
+        run: docker compose down

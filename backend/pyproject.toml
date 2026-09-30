@@ -1,0 +1,51 @@
+[project]
+name = "flowforge-backend"
+version = "0.1.0"
+description = "FlowForge API and shared backend foundation"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy[asyncio]>=2.0,<2.1",
+  "asyncpg>=0.31,<1",
+  "psycopg[binary]>=3.2,<4",
+  "redis>=7,<8",
+  "celery>=5.6,<6",
+  "httpx>=0.28,<1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9,<10",
+  "pytest-asyncio>=1,<2",
+  "ruff>=0.14,<1",
+  "mypy>=1.18,<2",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+markers = ["integration: requires the real local infrastructure stack"]
