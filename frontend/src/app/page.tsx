@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16 sm:px-12">
@@ -10,6 +12,10 @@ export default function Home() {
         A shared place to design processes, coordinate approvals, and follow work from start to finish.
       </p>
       <p className="mt-12 text-sm font-medium text-teal-800">In development</p>
+      <nav className="auth-links" aria-label="Get started">
+        <Link href="/register">Create account</Link>
+        <Link href="/login">Sign in</Link>
+      </nav>
     </main>
   );
 }

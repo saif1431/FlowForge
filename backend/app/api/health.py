@@ -1,5 +1,6 @@
+import asyncio
 from collections.abc import Awaitable, Callable
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
@@ -16,10 +17,13 @@ class HealthResponse(BaseModel):
 
 def database_probe(request: Request) -> DatabaseProbe:
     async def probe() -> None:
-        await ping_database(
-            request.app.state.engine,
-            request.app.state.settings.dependency_timeout_seconds,
-        )
+        timeout = request.app.state.settings.dependency_timeout_seconds
+        async with asyncio.timeout(timeout):
+            await ping_database(request.app.state.engine, timeout)
+            redis = request.app.state.redis
+            if redis is None:
+                raise RuntimeError("Authentication rate limiter is not configured")
+            await cast(Awaitable[bool], redis.ping())
 
     return probe
 

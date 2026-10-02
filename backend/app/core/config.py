@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, SecretStr, ValidationError, field_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -11,6 +11,50 @@ class Settings(BaseSettings):
     app_env: Literal["local", "test", "staging", "production"] = "local"
     database_url: SecretStr
     dependency_timeout_seconds: float = Field(default=3, gt=0, le=10)
+    redis_url: SecretStr | None = None
+    trusted_origins: list[str] = ["http://127.0.0.1:3000"]
+    session_absolute_seconds: int = Field(default=604800, ge=60, le=2592000)
+    session_idle_seconds: int = Field(default=86400, ge=60, le=604800)
+    rate_limit_prefix: str = "flowforge:auth"
+
+    @field_validator("trusted_origins")
+    @classmethod
+    def validate_origins(cls, origins: list[str]) -> list[str]:
+        from urllib.parse import urlsplit
+
+        if not origins:
+            raise ValueError("At least one trusted frontend origin is required")
+        for origin in origins:
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.username
+                or parsed.password
+                or "*" in origin
+            ):
+                raise ValueError("Expected exact HTTP(S) origins without paths or credentials")
+        return origins
+
+    @model_validator(mode="after")
+    def production_auth(self) -> Settings:
+        if self.app_env in {"staging", "production"}:
+            if self.redis_url is None or any(
+                not origin.startswith("https://") for origin in self.trusted_origins
+            ):
+                raise ValueError("Production authentication requires Redis and HTTPS origins")
+        return self
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.app_env in {"staging", "production"}
+
+    @property
+    def session_cookie(self) -> str:
+        return "__Host-flowforge_session" if self.secure_cookies else "flowforge_session"
 
     @field_validator("database_url")
     @classmethod

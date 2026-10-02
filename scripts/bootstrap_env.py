@@ -22,7 +22,8 @@ def main() -> None:
         f"REDIS_URL=redis://:{redis}@127.0.0.1:6379/0\n"
         f"RABBITMQ_URL=amqp://flowforge:{rabbit}@127.0.0.1:5672//\n"
         "MINIO_ENDPOINT=http://127.0.0.1:9000\nDEPENDENCY_TIMEOUT_SECONDS=3\n",
-        "# No browser-visible environment variables are needed in Milestone 0.\n",
+        "# Public API origin only; never put secrets in NEXT_PUBLIC_* variables.\n"
+        "NEXT_PUBLIC_API_URL=http://127.0.0.1:8000\n",
     )
     for path, content in zip(targets, contents, strict=True):
         path.write_text(content, encoding="utf-8")

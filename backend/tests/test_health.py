@@ -1,4 +1,6 @@
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -49,3 +51,16 @@ async def test_unreachable_database_returns_503(client: httpx.AsyncClient) -> No
     response = await client.get("/health/ready")
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
+
+
+async def test_readiness_requires_redis_but_liveness_does_not(settings: Settings) -> None:
+    app = create_app(settings)
+    async with app.router.lifespan_context(app):
+        app.state.redis = SimpleNamespace(ping=AsyncMock(side_effect=OSError("secret-sentinel")))
+        with patch("app.api.health.ping_database", AsyncMock()):
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                ready = await client.get("/health/ready")
+                assert ready.status_code == 503 and "secret-sentinel" not in ready.text
+                assert (await client.get("/health/live")).status_code == 200

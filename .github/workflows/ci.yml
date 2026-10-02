@@ -29,6 +29,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm run types:generate
+      - run: git diff --exit-code -- src/lib/api-schema.d.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -50,8 +52,10 @@ jobs:
       - run: uv sync --locked --python 3.14
       - run: uv run --locked ruff check . ../scripts
       - run: uv run --locked ruff format --check . ../scripts
-      - run: uv run --locked mypy app tests scripts ../scripts/bootstrap_env.py
+      - run: uv run --locked mypy app tests scripts migrations ../scripts/bootstrap_env.py
       - run: uv run --locked pytest -m "not integration"
+      - run: uv run --locked python -m scripts.export_openapi
+      - run: git diff --exit-code -- ../frontend/openapi.json
       - name: Generate isolated test credentials
         run: uv run --locked python ../scripts/bootstrap_env.py
       - name: Validate Compose
@@ -62,10 +66,25 @@ jobs:
         run: docker compose up --build --detach --wait --wait-timeout 180
       - name: Infrastructure smoke checks
         run: uv run --locked python -m scripts.smoke
+      - name: Apply and validate migrations
+        run: |
+          uv run --locked alembic upgrade head
+          uv run --locked alembic check
       - name: Integration tests
         env:
           RUN_INTEGRATION_TESTS: "1"
         run: uv run --locked pytest -m integration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Browser auth and organization tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - name: Infrastructure status
         if: always()
         working-directory: .

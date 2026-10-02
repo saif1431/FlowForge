@@ -1,5 +1,6 @@
 import pytest
 from pydantic import SecretStr
+from test_auth_integration import auth_env as auth_env
 
 from app.core.config import Settings
 

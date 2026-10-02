@@ -14,3 +14,30 @@ body {
 ::selection {
   background: #c4e9df;
 }
+
+.auth-shell { max-width: 30rem; margin: 0 auto; padding: 3rem 1rem; }
+.account-shell { max-width: 54rem; margin: 0 auto; padding: 2rem 1rem; }
+.brand { display: inline-block; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+.auth-card { background: white; border: 1px solid #dbe4e8; border-radius: 1rem; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 4px 24px #152b3506; }
+.auth-card h1 { font-size: 2rem; line-height: 1.2; font-weight: 650; margin-bottom: 1rem; }
+.auth-card h2 { font-size: 1.4rem; font-weight: 650; margin-bottom: .75rem; }
+.auth-card p { line-height: 1.6; margin-bottom: 1rem; }
+.auth-card .eyebrow { color: #08786f; font-size: .7rem; font-weight: 700; letter-spacing: .14em; }
+.auth-card label { display: block; font-size: .9rem; font-weight: 600; margin: 1.25rem 0; }
+.auth-card input { display: block; width: 100%; margin-top: .5rem; border: 1px solid #91a6ae; border-radius: .5rem; padding: .75rem; font-size: 1rem; }
+button { cursor: pointer; border: 1px solid #91a6ae; border-radius: .5rem; padding: .65rem 1rem; font-weight: 600; }
+button:disabled { opacity: .55; cursor: wait; }
+.primary-button { width: 100%; background: #0f766e; color: white; border-color: #0f766e; }
+.danger-button { color: #9f2535; border-color: #9f2535; }
+.auth-links { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-top: 1.5rem; color: #0f766e; }
+.auth-links a { text-decoration: underline; text-underline-offset: .2em; }
+.auth-error { background: #fff1f2; color: #9f2535; border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
+.auth-success { background: #ecfdf5; color: #065f46; border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
+.account-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.account-email { overflow-wrap: anywhere; font-weight: 600; }
+.session-list { list-style: none; margin: 1.5rem 0; padding: 0; }
+.session-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #dbe4e8; }
+.session-list p { font-size: .85rem; margin: .3rem 0; }
+:focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+.org-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.auth-links [aria-current="page"] { font-weight: 700; color: #152b35; }

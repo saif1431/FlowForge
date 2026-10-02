@@ -5,5 +5,5 @@ import nextTypescript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores([".next/**", "coverage/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".next-e2e/**", "test-results/**", "playwright-report/**", "coverage/**", "next-env.d.ts"]),
 ]);
