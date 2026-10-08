@@ -5,27 +5,32 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiRequest, type User } from "../lib/auth-api";
 import type { components } from "../lib/api-schema";
+import Teams from "./teams";
 
 type Org = components["schemas"]["OrganizationOutput"];
 type OrgList = components["schemas"]["OrganizationList"];
 type Members = components["schemas"]["MemberList"];
 type Invitations = components["schemas"]["InvitationList"];
+type Access = components["schemas"]["AccessOutput"];
+type Roles = components["schemas"]["RoleList"];
 const empty = { items: [], next_cursor: null };
 
-export default function Organizations({ orgId }: { orgId?: string }) {
+export default function Organizations({ orgId, view = "members" }: { orgId?: string; view?: "members" | "teams" }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [orgs, setOrgs] = useState<OrgList>(empty);
   const [org, setOrg] = useState<Org | null>(null);
   const [members, setMembers] = useState<Members>(empty);
   const [invites, setInvites] = useState<Invitations>(empty);
+  const [access, setAccess] = useState<Access | null>(null);
+  const [roles, setRoles] = useState<Roles>({ items: [] });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const generation = useRef(0);
   const active = useRef(true);
-  const owner = user?.id === org?.owner_user_id;
+  const can = (permission: string) => access?.permissions.includes(permission) ?? false;
   const base = orgId ? `/organizations/${orgId}` : "/organizations";
 
   const load = useCallback(async () => {
@@ -37,14 +42,18 @@ export default function Organizations({ orgId }: { orgId?: string }) {
       if (!person.email_verified_at) { setLoading(false); return; }
       const organizations = await apiRequest<OrgList>("/organizations");
       const selected = orgId ? await apiRequest<Org>(`/organizations/${orgId}`) : null;
+      const effective = orgId ? await apiRequest<Access>(`/organizations/${orgId}/access`) : null;
+      const catalog = orgId ? await apiRequest<Roles>(`/organizations/${orgId}/roles`) : { items: [] };
       const people = orgId ? await apiRequest<Members>(`/organizations/${orgId}/members`) : empty;
-      const invitations = !orgId || selected?.owner_user_id === person.id
+      const invitations = !orgId || effective?.permissions.includes("invitation:manage")
         ? await apiRequest<Invitations>(orgId ? `/organizations/${orgId}/invitations` : "/invitations") : empty;
       if (!active.current || current !== generation.current) return;
       setOrgs(organizations); setOrg(selected); setMembers(people); setInvites(invitations); setError("");
+      setAccess(effective); setRoles(catalog);
     } catch (failure) {
       if (!active.current || current !== generation.current) return;
       setOrg(null); setMembers(empty); setInvites(empty); setOrgs(empty);
+      setAccess(null); setRoles({ items: [] });
       if (failure instanceof ApiError && failure.status === 401) { setUser(null); router.replace("/login"); }
       else setError(failure instanceof Error ? failure.message : "Unable to load organizations.");
     } finally {
@@ -74,6 +83,7 @@ export default function Organizations({ orgId }: { orgId?: string }) {
       if (failure instanceof ApiError && failure.status === 401) {
         setUser(null); setOrg(null); setMembers(empty); setInvites(empty); router.replace("/login");
       } else {
+        if (failure instanceof ApiError && failure.status === 403) await load();
         if (failure instanceof ApiError && failure.status === 404) { setOrg(null); setMembers(empty); setInvites(empty); }
         setError(failure instanceof Error ? failure.message : "Please try again.");
       }
@@ -114,17 +124,23 @@ export default function Organizations({ orgId }: { orgId?: string }) {
         {!orgId && <form onSubmit={(event) => { event.preventDefault(); void action("/organizations", "POST", { name: new FormData(event.currentTarget).get("name") }, true); }}>
           <label>Organization name<input name="name" required maxLength={120} /></label><button disabled={busy}>Create organization</button>
         </form>}
-        {org && owner && <form key={org.name} onSubmit={(event) => { event.preventDefault(); void action(base, "PATCH", { name: new FormData(event.currentTarget).get("name") }); }}>
+        {org && <nav className="auth-links" aria-label="Organization sections"><Link href={`/app/${org.id}/members`}>Members</Link><Link href={`/app/${org.id}/teams`}>Teams</Link><Link href={`/app/${org.id}/workflows`}>Workflows</Link></nav>}
+        {org && can("organization:update") && <form key={org.name} onSubmit={(event) => { event.preventDefault(); void action(base, "PATCH", { name: new FormData(event.currentTarget).get("name") }); }}>
           <label>Organization name<input name="name" required maxLength={120} defaultValue={org.name} /></label><button disabled={busy}>Save name</button>
         </form>}
       </section>
-      {org && <section className="auth-card"><h2>Members</h2><ul className="session-list">{members.items.map((member) => <li key={member.id}>
-        <div className="account-email">{member.email}{member.user_id === org.owner_user_id ? " (owner)" : ""}</div>
-        {member.user_id !== org.owner_user_id && (owner || member.user_id === user.id) && <button disabled={busy} onClick={() => {
+      {org && view === "teams" && <Teams key={`${org.id}:${access?.role_code}`} orgId={org.id} canManage={can("team:manage")} members={members} moreMembers={() => more("members")} refreshAccess={load} />}
+      {org && view === "members" && <section className="auth-card"><h2>Members</h2><ul className="session-list">{members.items.map((member) => <li key={member.id}>
+        <div><span className="account-email">{member.email}</span><p>{roles.items.find((role) => role.code === member.role_code)?.name ?? member.role_code}</p></div>
+        {member.user_id !== org.owner_user_id && member.user_id !== user.id && can("role:assign") && (member.role_code !== "admin" || can("role:assign_admin")) && <form key={`${member.id}:${member.role_code}`} onSubmit={(event) => { event.preventDefault(); void action(`${base}/members/${member.id}/role`, "PATCH", { role_code: new FormData(event.currentTarget).get("role_code") }); }}>
+          <label htmlFor={`role-${member.id}`}>Role for {member.email}</label><select id={`role-${member.id}`} name="role_code" defaultValue={member.role_code} disabled={busy}>{roles.items.filter((role) => role.code !== "owner" && (role.code !== "admin" || can("role:assign_admin"))).map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select>
+          <button disabled={busy}>Save role</button>
+        </form>}
+        {member.user_id !== org.owner_user_id && (member.user_id === user.id ? can("membership:leave") : can("member:remove") && (member.role_code !== "admin" || can("role:assign_admin"))) && <button disabled={busy} onClick={() => {
           if (window.confirm(member.user_id === user.id ? "Leave this organization?" : `Remove ${member.email} from this organization?`)) void action(`${base}/members/${member.id}`, "DELETE");
         }}>{member.user_id === user.id ? "Leave organization" : "Remove member"}</button>}
       </li>)}</ul>{members.next_cursor && <button disabled={busy} onClick={() => void more("members")}>More members</button>}</section>}
-      {(!orgId || (org && owner)) && <section className="auth-card"><h2>{orgId ? "Invitations" : "Your invitations"}</h2>
+      {(!orgId || (org && view === "members" && can("invitation:manage"))) && <section className="auth-card"><h2>{orgId ? "Invitations" : "Your invitations"}</h2>
         {orgId && <><form onSubmit={(event) => { event.preventDefault(); void action(`${base}/invitations`, "POST", { email: new FormData(event.currentTarget).get("email") }); }}>
           <label>Invite email address<input name="email" type="email" required maxLength={320} /></label><button disabled={busy}>Invite member</button>
         </form><p>Invitations appear in the recipient’s account. Email delivery is not available yet.</p></>}

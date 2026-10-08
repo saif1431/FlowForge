@@ -7,7 +7,7 @@ export type Message = components["schemas"]["Message"];
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code = "", public details: Record<string, unknown> = {}) {
     super(message);
   }
 }
@@ -35,7 +35,7 @@ export async function apiRequest<T>(path: string, method = "GET", body?: unknown
   }
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new ApiError(response.status, data?.error?.message ?? "Something went wrong. Please try again.");
+    throw new ApiError(response.status, data?.error?.message ?? "Something went wrong. Please try again.", data?.error?.code, data?.error?.details);
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }

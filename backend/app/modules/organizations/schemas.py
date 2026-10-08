@@ -28,6 +28,7 @@ class MemberOutput(BaseModel):
     user_id: UUID
     email: str
     created_at: datetime
+    role_code: str
 
 
 class MemberList(BaseModel):

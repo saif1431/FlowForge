@@ -2,10 +2,10 @@ from datetime import timedelta
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEvent, Invitation, Membership, Organization, User
+from app.db.models import AuditEvent, Invitation, Membership, Organization, TeamMember, User
 from app.modules.auth.errors import AuthError
 from app.modules.auth.service import now
 from app.modules.organizations import repository as repo
@@ -18,6 +18,7 @@ from app.modules.organizations.schemas import (
     OrganizationOutput,
     PageInput,
 )
+from app.modules.roles.authorization import manage_member, require
 
 
 def verified(user: User) -> None:
@@ -25,13 +26,14 @@ def verified(user: User) -> None:
         raise AuthError(403, "EMAIL_NOT_VERIFIED", "Verify your email before using organizations.")
 
 
-def owner(tenant: repo.TenantContext, user: User) -> None:
-    if tenant.organization.owner_user_id != user.id:
-        raise AuthError(403, "FORBIDDEN", "Only the organization owner can perform this action.")
-
-
 def audit(
-    db: AsyncSession, user: User, org_id: UUID, action: str, request_id: str, resource_id: UUID
+    db: AsyncSession,
+    user: User,
+    org_id: UUID,
+    action: str,
+    request_id: str,
+    resource_id: UUID,
+    details: dict[str, str] | None = None,
 ) -> None:
     db.add(
         AuditEvent(
@@ -40,6 +42,7 @@ def audit(
             action=action,
             request_id=request_id,
             resource_id=resource_id,
+            details=details,
         )
     )
 
@@ -49,7 +52,7 @@ async def create(db: AsyncSession, user: User, name: str, request_id: str) -> Or
     org = Organization(name=name, owner_user_id=user.id)
     db.add(org)
     await db.flush()
-    db.add(Membership(organization_id=org.id, user_id=user.id))
+    db.add(Membership(organization_id=org.id, user_id=user.id, role_code="owner"))
     audit(db, user, org.id, "organization.created", request_id, org.id)
     await db.commit()
     return OrganizationOutput.model_validate(org)
@@ -77,7 +80,7 @@ async def organizations(db: AsyncSession, user: User, page: PageInput) -> Organi
 async def rename(
     db: AsyncSession, tenant: repo.TenantContext, user: User, name: str, request_id: str
 ) -> OrganizationOutput:
-    owner(tenant, user)
+    await require(db, tenant, "organization:update")
     tenant.organization.name = name
     audit(db, user, tenant.id, "organization.renamed", request_id, tenant.id)
     await db.commit()
@@ -85,6 +88,7 @@ async def rename(
 
 
 async def members(db: AsyncSession, tenant: repo.TenantContext, page: PageInput) -> MemberList:
+    await require(db, tenant, "directory:read")
     query = (
         select(Membership, User.email)
         .join(User)
@@ -98,7 +102,13 @@ async def members(db: AsyncSession, tenant: repo.TenantContext, page: PageInput)
     rows = list(await db.execute(query.order_by(Membership.id).limit(page.limit + 1)))
     result = MemberList(
         items=[
-            MemberOutput(id=row.id, user_id=row.user_id, email=email, created_at=row.created_at)
+            MemberOutput(
+                id=row.id,
+                user_id=row.user_id,
+                email=email,
+                created_at=row.created_at,
+                role_code=row.role_code,
+            )
             for row, email in rows[: page.limit]
         ],
         next_cursor=rows[page.limit - 1][0].id if len(rows) > page.limit else None,
@@ -114,8 +124,17 @@ async def remove_member(
     if member.user_id == tenant.organization.owner_user_id:
         raise AuthError(409, "OWNER_REQUIRED", "The organization owner cannot leave or be removed.")
     if member.user_id != user.id:
-        owner(tenant, user)
+        await manage_member(db, tenant, member, "member:remove")
+    else:
+        await require(db, tenant, "membership:leave")
+    await db.execute(
+        delete(TeamMember).where(
+            TeamMember.organization_id == tenant.id,
+            TeamMember.membership_id == member.id,
+        )
+    )
     member.revoked_at = now()
+    member.role_code = "member"
     audit(db, user, tenant.id, "membership.revoked", request_id, member.id)
     await db.commit()
 
@@ -136,7 +155,7 @@ def invitation_output(row: Invitation, org: Organization) -> InvitationOutput:
 async def invite(
     db: AsyncSession, tenant: repo.TenantContext, user: User, email: str, request_id: str
 ) -> InvitationOutput:
-    owner(tenant, user)
+    await require(db, tenant, "invitation:manage")
     existing = await db.scalar(
         select(Membership.id)
         .join(User)
@@ -184,7 +203,7 @@ async def invitations(
         # Explicit identity scope for recipients who are not members yet.
         query = query.where(Invitation.email == user.email)
     else:
-        owner(tenant, user)
+        await require(db, tenant, "invitation:manage")
         query = query.where(Invitation.organization_id == tenant.id)
     if page.cursor:
         query = query.where(Invitation.id > page.cursor)
@@ -210,7 +229,7 @@ async def manage_invitation(
     action: Literal["revoke", "renew"],
     request_id: str,
 ) -> InvitationOutput:
-    owner(tenant, user)
+    await require(db, tenant, "invitation:manage")
     row = await repo.invitation(db, tenant, invitation_id)
     pending(row)
     if action == "revoke":
@@ -263,6 +282,7 @@ async def respond(
             db.add(member)
         else:
             member.revoked_at = None
+            member.role_code = "member"
         await db.flush()
         audit(db, user, org_id, "membership.joined", request_id, member.id)
         row.status = "accepted"

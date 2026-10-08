@@ -12,6 +12,9 @@ from app.db.connection import create_engine
 from app.modules.auth.errors import AuthError
 from app.modules.auth.router import router as auth_router
 from app.modules.organizations.router import router as organizations_router
+from app.modules.roles.router import router as roles_router
+from app.modules.teams.router import router as teams_router
+from app.modules.workflows.router import router as workflows_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -42,6 +45,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(organizations_router)
+    app.include_router(roles_router)
+    app.include_router(teams_router)
+    app.include_router(workflows_router)
     app.add_middleware(AuthBoundary)
     app.add_exception_handler(AuthError, auth_error)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_error)  # type: ignore[arg-type]

@@ -1,7 +1,7 @@
 # FlowForge - Phase-by-phase TODO
 
-Latest completed phase: **M2 - COMPLETE** (2026-10-02).
-Next phase: **M3 - NOT STARTED**; requires the owner's instruction and role matrix decision.
+Latest completed phase: **M3 - COMPLETE** (verified 2026-10-06).
+Next phase: **M4 - NOT STARTED**; continuation is authorized, with graph/approval configuration decisions still required before implementation.
 
 This checklist follows [the approved roadmap](docs/12_INITIAL_ROADMAP.md). Build one task at a time within one phase. Existing setup files are not proof that acceptance checks have passed; checked boxes require recorded verification.
 
@@ -83,15 +83,27 @@ Verification (2026-10-02):
 
 ## M3 - Roles, permissions, and teams
 
-Status: NOT STARTED
+Status: COMPLETE
 
-- [ ] Obtain the owner's role matrix decision.
-- [ ] Add roles, permissions, and role-permission mappings.
-- [ ] Add team membership.
-- [ ] Add centralized backend authorization helpers.
-- [ ] Phase complete: allowed actions succeed and forbidden actions fail according to the approved role matrix.
+M2 reverification (2026-10-03): all 42 backend tests (17 unit, 25 integration), Ruff lint/format, mypy, frontend lint/type checks, 8 component tests, 3 Edge browser tests, and production build passed. All five infrastructure smoke checks passed. Local Alembic remains at `0002_organizations` with no schema drift. OpenAPI and TypeScript regeneration produced no contract changes. Browser servers shut down successfully. Docker Desktop and existing containers were started for verification; no application fixes were needed. Remote CI was not run.
 
-Verification: Pending.
+The owner authorized moving to M3 after these checks. Following presentation of the [matrix and implementation plan](docs/15_M3_ROLE_MATRIX_PROPOSAL.md), the owner instructed completing M3 on 2026-10-06. Implementation uses the recommended fixed single-role matrix.
+
+- [x] Obtain the owner's role matrix decision.
+- [x] Add roles, permissions, and role-permission mappings.
+- [x] Add team membership.
+- [x] Add centralized backend authorization helpers.
+- [x] Phase complete: allowed actions succeed and forbidden actions fail according to the approved role matrix.
+
+Verification (2026-10-06):
+
+- Implemented fixed Owner/Admin/Designer/Approver/Member/Viewer roles, persisted permission mappings, per-organization assignments, centralized backend permission checks, protected Owner/Admin policies, and tenant-constrained teams. Added role management and teams UI with effective-permission controls.
+- All 56 backend tests passed: the full 54-test suite plus two additional targeted regressions (17 unit, 39 integration total). The 14 M3 cases cover the six-role matrix, escalation, role revocation, tenant boundaries, per-organization roles, team lifecycle/pagination, rejoining, concurrent changes/removal, database constraints, auditing, migration preservation, CSRF, rate limits, and redaction.
+- Ruff lint/format and mypy passed. Migration `0003_roles_teams` is applied locally; Alembic reports no schema drift. All five infrastructure smoke checks passed.
+- Frontend lint/type checks, all 12 component tests, and the final production build passed. All four Edge browser scenarios passed: the three existing scenarios in the full run and the M3 scenario in a focused rerun after correcting select labels. M3 covers Admin appointment, persisted team management, demotion rejecting an open-page write, read-only access, deletion, and a narrow screen. Both test-server ports were closed after cleanup.
+- OpenAPI and TypeScript contracts regenerated without drift. CI includes the new tests; remote CI was not run. See [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for the delivered contract.
+
+The initial source audit found M3 unimplemented; that gap is now resolved. M4 is next, and the owner's earlier continuation instruction remains recorded. Its graph/approval configuration decision is still open.
 
 ## M4 - Workflow definitions and versioning
 
@@ -130,17 +142,6 @@ Status: NOT STARTED
 
 Verification: Pending.
 
-## M9 - Background workers and transactional outbox
-
-Status: NOT STARTED
-
-- [ ] Configure RabbitMQ queues and Celery workers.
-- [ ] Add thin worker tasks that use shared domain code.
-- [ ] Add transactional outbox records and the publisher.
-- [ ] Handle at-least-once delivery with idempotent processing.
-- [ ] Phase complete: committed work survives broker outages and duplicate delivery does not duplicate business transitions.
-
-Verification: Pending.
 
 ## M7 - Core workflow engine
 
@@ -163,6 +164,19 @@ Status: NOT STARTED
 - [ ] Add authorized approve/reject actions with atomic concurrency control.
 - [ ] Add task comments and pending/completed/overdue views using approved assignment and due-date policies.
 - [ ] Phase complete: concurrent decisions produce one winner, unauthorized decisions fail, and approved work resumes once logically.
+
+Verification: Pending.
+
+
+## M9 - Background workers and transactional outbox
+
+Status: NOT STARTED
+
+- [ ] Configure RabbitMQ queues and Celery workers.
+- [ ] Add thin worker tasks that use shared domain code.
+- [ ] Add transactional outbox records and the publisher.
+- [ ] Handle at-least-once delivery with idempotent processing.
+- [ ] Phase complete: committed work survives broker outages and duplicate delivery does not duplicate business transitions.
 
 Verification: Pending.
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, JsonValue, SecretStr, field_validator
 
 
 class EmailInput(BaseModel):
@@ -59,7 +59,7 @@ class Message(BaseModel):
 class ErrorDetail(BaseModel):
     code: str
     message: str
-    details: dict[str, str]
+    details: dict[str, JsonValue]
     request_id: str
 
 

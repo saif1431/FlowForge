@@ -2,7 +2,7 @@
 
 FlowForge is a multi-tenant SaaS platform for designing, publishing, executing, monitoring, approving, and auditing internal business workflows.
 
-This repository contains **M0 bootstrap, M1 authentication, and M2 organizations**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
+This repository contains **M0 bootstrap, M1 authentication, M2 organizations, and M3 roles and teams**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, role-based authorization, teams, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
 
 ## Product idea
 
@@ -114,7 +114,7 @@ npm.cmd run dev
 Open `http://127.0.0.1:3000`. API documentation is at `http://127.0.0.1:8000/docs`.
 Use `/register`, `/login`, and `/account` for registration, login, and session management. Use the same host spelling (`127.0.0.1`) for both applications. `NEXT_PUBLIC_API_URL` defaults to `http://127.0.0.1:8000`; backend `TRUSTED_ORIGINS` defaults to `["http://127.0.0.1:3000"]`. Set both when changing origins. Verification/password-reset foundations exist; email delivery arrives in M12. See [M1 authentication](docs/13_AUTH_IMPLEMENTATION.md) for local testing links and the full contract.
 
-Open `/organizations` after verifying your email to create/switch organizations and respond to invitations. Owners manage members and invitations at `/app/[org]/members`. Invitations appear in the recipient's account; email delivery remains M12. Use the local verification helper until delivery is implemented. See [M2 organizations](docs/14_ORGANIZATIONS_IMPLEMENTATION.md) for the lifecycle and API details.
+Open `/organizations` after verifying your email to create/switch organizations and respond to invitations. Owners and Admins manage members and invitations at `/app/[org]/members`; only Owners can appoint or remove Admins. Browse and manage teams at `/app/[org]/teams`. Each membership has one fixed role; teams do not grant permissions. Invitations appear in the recipient's account; email delivery remains M12. Use the local verification helper until delivery is implemented. See [M2 organizations](docs/14_ORGANIZATIONS_IMPLEMENTATION.md) for the invitation lifecycle and [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for current access policy and API details.
 
 Health endpoints are intentionally outside the `/api/v1` business prefix:
 
@@ -175,7 +175,7 @@ Next.js linting is a separate CI check, following its [installation guidance](ht
 
 GitHub Actions defines these frontend/backend checks and starts isolated infrastructure with fresh
 credentials for integration tests. No remote CI run is implied by passing local commands.
-CI also checks migrations, generated API contracts, and browser authentication/organization flows.
+CI also checks migrations, generated API contracts, and browser authentication/organization/role/team flows.
 
 Stop application terminals with Ctrl+C. From the root, `docker compose stop` stops infrastructure
 while retaining containers and volumes; `docker compose down` removes containers and retains volumes.
@@ -199,5 +199,7 @@ Do not add `--volumes` unless you intend to delete local data.
 | `docs/12_INITIAL_ROADMAP.md` | Suggested milestone sequence from zero code to production |
 | `docs/13_AUTH_IMPLEMENTATION.md` | Approved M1 session strategy, auth contract, and verification/reset testing |
 | `docs/14_ORGANIZATIONS_IMPLEMENTATION.md` | M2 organization access, invitations, tenant context, API, and verification |
+| `docs/15_M3_ROLE_MATRIX_PROPOSAL.md` | Selected M3 role matrix and resource policies |
+| `docs/16_ROLES_TEAMS_IMPLEMENTATION.md` | M3 roles, permissions, teams, API, migrations, and verification |
 
 The PDF `FlowForge_Project_Scope.pdf` is a readable project brief for humans. The Markdown files are the implementation source of truth for the coding assistant.

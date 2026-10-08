@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import JsonValue
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -11,18 +12,29 @@ from app.core.config import Settings
 from app.modules.auth.errors import AuthError
 
 
-def error_response(request_id: str, status: int, code: str, message: str) -> JSONResponse:
+def error_response(
+    request_id: str,
+    status: int,
+    code: str,
+    message: str,
+    details: dict[str, JsonValue] | None = None,
+) -> JSONResponse:
     return JSONResponse(
         status_code=status,
         content={
-            "error": {"code": code, "message": message, "details": {}, "request_id": request_id}
+            "error": {
+                "code": code,
+                "message": message,
+                "details": details or {},
+                "request_id": request_id,
+            }
         },
         headers={"Cache-Control": "no-store", "X-Request-ID": request_id},
     )
 
 
 async def auth_error(request: Request, exc: AuthError) -> JSONResponse:
-    return error_response(request.state.request_id, exc.status, exc.code, exc.message)
+    return error_response(request.state.request_id, exc.status, exc.code, exc.message, exc.details)
 
 
 async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -105,7 +117,7 @@ class AuthBoundary:
             guarded,
             allow_origins=settings.trusted_origins,
             allow_credentials=True,
-            allow_methods=["GET", "POST", "PATCH", "DELETE"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             allow_headers=["Content-Type", "X-CSRF-Protection"],
         )
         await cors(scope, replay, secured_send)

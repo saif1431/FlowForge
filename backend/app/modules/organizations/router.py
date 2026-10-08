@@ -17,6 +17,7 @@ from app.modules.organizations.schemas import (
     OrganizationOutput,
     PageInput,
 )
+from app.modules.roles.authorization import require
 
 router = APIRouter(
     prefix="/api/v1",
@@ -61,6 +62,7 @@ async def list_organizations(db: Database, user: CurrentUser, page: Page) -> Org
 
 @router.get("/organizations/{org_id}")
 async def detail(db: Database, tenant: Tenant) -> OrganizationOutput:
+    await require(db, tenant, "directory:read")
     result = OrganizationOutput.model_validate(tenant.organization)
     await db.commit()
     return result
