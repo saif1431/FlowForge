@@ -59,7 +59,7 @@ test("unsaved JSON disables publication and validation", async () => {
   expect(screen.getByRole("button", { name: "Publish version" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Validate saved graph" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("valid JSON");
+  expect(await screen.findByText("The graph must contain valid JSON. Your edits have been kept.")).toBeVisible();
   expect(screen.getByLabelText("Workflow graph (JSON)")).toHaveValue("not JSON");
 });
 
@@ -91,4 +91,22 @@ test("late response from a previous organization cannot expose its workflow", as
   expect(await screen.findByRole("alert")).toHaveTextContent("Not found.");
   resolveOld({ id: "workflow", name: "Private old workflow" });
   await waitFor(() => expect(screen.queryByText("Private old workflow")).not.toBeInTheDocument());
+});
+
+test("failed save keeps local edits and permits retry", async () => {
+  setup();
+  const original = vi.mocked(apiRequest).getMockImplementation()!;
+  vi.mocked(apiRequest).mockImplementation(async (path, method, ...rest) => {
+    if (method === "PUT") throw new ApiError(0, "Unable to connect. Check your connection and try again.");
+    return original(path, method, ...rest);
+  });
+  render(<Workflows orgId="org" workflowId="workflow" />);
+  const input = await screen.findByLabelText("Workflow graph (JSON)");
+  const edits = '{"nodes": [], "edges": []}';
+  fireEvent.change(input, { target: { value: edits } });
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  expect(await screen.findByText("Unable to connect. Check your connection and try again.")).toBeVisible();
+  expect(input).toHaveValue(edits);
+  expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Publish version" })).toBeDisabled();
 });

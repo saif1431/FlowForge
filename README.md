@@ -2,7 +2,7 @@
 
 FlowForge is a multi-tenant SaaS platform for designing, publishing, executing, monitoring, approving, and auditing internal business workflows.
 
-This repository contains **M0 bootstrap through M4 workflow definitions and versioning**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, role-based authorization, teams, workflow drafts and immutable published versions, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
+This repository contains **M0 bootstrap through M5 visual workflow builder**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, role-based authorization, teams, visual workflow authoring, drafts and immutable published versions, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
 
 ## Product idea
 
@@ -120,7 +120,7 @@ Local development sets `REQUIRE_EMAIL_VERIFICATION=false` in `backend/.env`, so 
 
 Open `/organizations` after signing in to create/switch organizations and respond to invitations. Owners and Admins manage members and invitations at `/app/[org]/members`; only Owners can appoint or remove Admins. Browse and manage teams at `/app/[org]/teams`. Each membership has one fixed role; teams do not grant permissions. Invitations appear in the recipient's account; email delivery remains M12. Use the local verification helper until delivery is implemented. See [M2 organizations](docs/14_ORGANIZATIONS_IMPLEMENTATION.md) for the invitation lifecycle and [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for current access policy and API details.
 
-Open **Workflows** from an organization's navigation, or visit `/app/[org]/workflows`, to create workflows, edit a draft graph as JSON, validate, publish, and create a new draft from a published version. Use **Load example graph → Save draft → Validate saved graph → Publish version** for a first test. Owners/Admins can publish; Designers can create/edit; other roles can read. Published graphs remain immutable and stale edits receive a conflict. The visual builder is M5; execution comes later. See [M4 workflow definitions and versioning](docs/17_WORKFLOWS_IMPLEMENTATION.md) for file locations, configuration, API routes, startup commands, and manual/automated tests.
+Open **Workflows** from an organization to create or open a workflow in the visual builder. Add steps, drag them into place, connect named outputs, and edit node settings. Use **Save draft > Validate saved graph > Publish version** to create an immutable version. Owners/Admins can publish; Designers can edit; other roles can inspect. Conflicts preserve local edits and require an explicit reload. Advanced JSON remains available for recovery. This phase designs workflows; execution comes later. See [M5 visual builder and testing](docs/18_VISUAL_BUILDER_IMPLEMENTATION.md) for a guided example, and [M4](docs/17_WORKFLOWS_IMPLEMENTATION.md) for the API contract.
 
 Health endpoints are intentionally outside the `/api/v1` business prefix:
 
@@ -208,5 +208,6 @@ Do not add `--volumes` unless you intend to delete local data.
 | `docs/15_M3_ROLE_MATRIX_PROPOSAL.md` | Selected M3 role matrix and resource policies |
 | `docs/16_ROLES_TEAMS_IMPLEMENTATION.md` | M3 roles, permissions, teams, API, migrations, and verification |
 | `docs/17_WORKFLOWS_IMPLEMENTATION.md` | M4 graph contract, version lifecycle, API, implementation locations, and testing guide |
+| `docs/18_VISUAL_BUILDER_IMPLEMENTATION.md` | M5 visual authoring, node settings, conflict recovery and manual/automated testing |
 
 The PDF `FlowForge_Project_Scope.pdf` is a readable project brief for humans. The Markdown files are the implementation source of truth for the coding assistant.

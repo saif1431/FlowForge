@@ -38,11 +38,13 @@ test("create, validate, publish, clone and resolve a conflicting workflow draft"
     await expect(second.getByRole("heading", { name: "Version 2: draft" })).toBeVisible();
     const graph = JSON.parse(await page.getByLabel("Workflow graph (JSON)").inputValue());
     graph.nodes[0].label = "First editor";
+    await page.getByText("Advanced graph JSON / copy local edits", { exact: true }).click();
     await page.getByLabel("Workflow graph (JSON)").fill(JSON.stringify(graph));
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page.getByText("Draft saved.")).toBeVisible();
     graph.nodes[0].label = "Second editor";
     const edits = JSON.stringify(graph);
+    await second.getByText("Advanced graph JSON / copy local edits", { exact: true }).click();
     await second.getByLabel("Workflow graph (JSON)").fill(edits);
     await second.getByRole("button", { name: "Save draft" }).click();
     await expect(second.getByText("This version changed. Reload it before saving or publishing.")).toBeVisible();

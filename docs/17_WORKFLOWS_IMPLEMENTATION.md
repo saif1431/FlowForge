@@ -167,7 +167,7 @@ observed with development-server navigation during acceptance testing.
 If Edge is unavailable, install Playwright Chromium as described in the
 README and omit `E2E_BROWSER_CHANNEL`. Full-project check commands are in README.
 
-M5 remains separate: React Flow canvas and property editors. Runtime execution,
+The M5 canvas and property editors are documented in [the visual builder guide](18_VISUAL_BUILDER_IMPLEMENTATION.md). The JSON steps above remain available under Advanced graph JSON. Runtime execution,
 approval inboxes, actual emails/webhooks and delays are also later milestones.
 
 ## Verification recorded 2026-10-08

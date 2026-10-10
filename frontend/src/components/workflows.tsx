@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStore } from "zustand";
+import { createWorkflowDraft } from "../lib/workflow-draft";
+import { canvasGraph } from "../lib/workflow-graph";
 import { apiRequest, ApiError } from "../lib/auth-api";
 import type { components } from "../lib/api-schema";
 
@@ -15,6 +19,7 @@ type Versions = components["schemas"]["VersionList"];
 type Validation = components["schemas"]["GraphValidation"];
 type Graph = components["schemas"]["GraphInput"];
 const empty = { items: [], next_cursor: null };
+const WorkflowBuilder = dynamic(() => import("./workflow-builder"), { ssr: false, loading: () => <p role="status">Loading visual builder…</p> });
 
 function exampleGraph(): Graph {
   const start = crypto.randomUUID(), end = crypto.randomUUID();
@@ -35,8 +40,9 @@ export default function Workflows({ orgId, workflowId }: { orgId: string; workfl
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [versions, setVersions] = useState<Versions>(empty);
   const [version, setVersion] = useState<Version | null>(null);
-  const [editor, setEditor] = useState("");
-  const [savedText, setSavedText] = useState("");
+  const [draftStore] = useState(createWorkflowDraft);
+  const { editor, savedText, setEditor, setSavedText } = useStore(draftStore);
+  const graph = useMemo(() => canvasGraph(editor), [editor]);
   const [report, setReport] = useState<Validation | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -48,11 +54,11 @@ export default function Workflows({ orgId, workflowId }: { orgId: string; workfl
   const dirty = editor !== savedText;
   const can = (permission: string) => access?.permissions.includes(permission) ?? false;
 
-  function acceptVersion(value: Version) {
+  const acceptVersion = useCallback((value: Version) => {
     setVersion(value);
     const text = JSON.stringify(value.graph, null, 2);
     setEditor(text); setSavedText(text); setReport(null); setConflict(false);
-  }
+  }, [setEditor, setSavedText]);
 
   const load = useCallback(async (preferred?: string) => {
     const current = ++generation.current;
@@ -79,7 +85,7 @@ export default function Workflows({ orgId, workflowId }: { orgId: string; workfl
       if (failure instanceof ApiError && failure.status === 401) router.replace("/login");
       setError(failure instanceof Error ? failure.message : "Unable to load workflows.");
     } finally { if (active.current && current === generation.current) setLoading(false); }
-  }, [base, orgId, workflowId, router]);
+  }, [base, orgId, workflowId, router, acceptVersion, setEditor]);
 
   useEffect(() => {
     active.current = true;
@@ -172,7 +178,9 @@ export default function Workflows({ orgId, workflowId }: { orgId: string; workfl
     if (!dirty || window.confirm("Discard your unsaved graph edits and load the saved version?")) { setMessage(""); void load(id); }
   }
 
-  return <main className="account-shell">
+  return <main className={`account-shell${workflowId ? " workflow-shell" : ""}`} onClickCapture={(event) => {
+    if (dirty && (event.target as HTMLElement).closest("a[href]") && !window.confirm("Leave this page and discard your unsaved workflow edits?")) { event.preventDefault(); event.stopPropagation(); }
+  }}>
     <header className="account-header"><Link className="brand" href="/organizations">FlowForge</Link><Link href="/account">Your account</Link></header>
     <nav className="auth-links" aria-label="Organization sections"><Link href={`/app/${orgId}/members`}>Members</Link><Link href={`/app/${orgId}/teams`}>Teams</Link><Link href={`/app/${orgId}/workflows`}>Workflows</Link></nav>
     {error && <div role="alert" className="auth-error">{error}{!conflict && <button disabled={busy || loading} onClick={() => reload(version?.id)}>Try again</button>}</div>}
@@ -190,11 +198,14 @@ export default function Workflows({ orgId, workflowId }: { orgId: string; workfl
       </section>}
       {version && <section className="auth-card"><h2>Version {version.version_number}: {version.status}</h2><p>Revision {version.revision} · {version.graph.nodes?.length ?? 0} nodes · {version.graph.edges?.length ?? 0} connections</p>
         {version.status === "published" && <p>This published version is fixed. Create a new draft to make changes.</p>}
+        {graph ? <WorkflowBuilder key={version.id} graph={graph} orgId={orgId} readOnly={busy || conflict || version.status !== "draft" || !can("workflow:edit")} issues={report?.issues} onChange={(value) => { setEditor(JSON.stringify(value, null, 2)); setReport(null); setMessage(""); }} /> : <p role="alert">The visual canvas needs a graph with valid nodes and connections. Correct the advanced JSON below; your edits are preserved.</p>}
+        <details className="builder-json"><summary>Advanced graph JSON / copy local edits</summary>
         <label htmlFor="workflow-graph">Workflow graph (JSON)</label>
-        <p id="graph-help">Use node IDs to connect steps. Drafts may be incomplete; publication requires a valid graph. The visual editor arrives in M5.</p>
+        <p id="graph-help">Advanced editing and recovery. Drafts may be incomplete; publication requires a valid graph. Do not include credentials or secrets.</p>
         <textarea id="workflow-graph" className="graph-editor" aria-describedby="graph-help" spellCheck={false} rows={18} value={editor} disabled={busy} readOnly={version.status !== "draft" || !can("workflow:edit")} onChange={(event) => { setEditor(event.target.value); setReport(null); setMessage(""); }} />
+        </details>
         {dirty && <p role="status">Unsaved changes. Save before validating or publishing.</p>}
-        {conflict && <p role="alert">Your edits are preserved below. Copy them before reloading the saved version, then merge your changes.</p>}
+        {conflict && <p role="alert">Your edits are preserved. Open Advanced graph JSON to copy them before reloading the saved version, then reapply your changes. Saving is blocked until you reload.</p>}
         <div className="org-actions">
           {version.status === "draft" && can("workflow:edit") && <><button disabled={busy} onClick={() => { if (!dirty || window.confirm("Replace your unsaved edits with the example graph?")) { setEditor(JSON.stringify(exampleGraph(), null, 2)); setReport(null); setMessage(""); } }}>Load example graph</button><button disabled={busy || conflict} onClick={() => void action("save")}>Save draft</button></>}
           <button disabled={busy || dirty || conflict} onClick={() => void action("validate")}>Validate saved graph</button>

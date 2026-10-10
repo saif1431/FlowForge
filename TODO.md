@@ -1,7 +1,7 @@
 # FlowForge - Phase-by-phase TODO
 
-Latest completed phase: **M4 - COMPLETE** (verified 2026-10-08).
-Next phase: **M5 - NOT STARTED**. Awaiting the owner's instruction to continue.
+Latest completed phase: **M5 - COMPLETE** (verified 2026-10-10).
+Next phase: **M6 - NOT STARTED**. Awaiting owner authorization and runtime decisions.
 
 Local verification follow-up (2026-10-10): at the owner's request, the existing
 backend `.env` and local bootstrap now set `REQUIRE_EMAIL_VERIFICATION=false`.
@@ -153,15 +153,38 @@ Verification (2026-10-08):
 
 ## M5 - Visual workflow builder
 
-Status: NOT STARTED
+Status: COMPLETE
 
-- [ ] Add the React Flow canvas and custom node types.
-- [ ] Add the node property editor.
-- [ ] Add draft saving.
-- [ ] Show validation errors and handle version conflicts.
-- [ ] Phase complete: users can edit and reload a saved graph, see validation errors, and handle conflicting edits safely.
+- [x] Add the React Flow canvas and custom node types.
+- [x] Add the node property editor.
+- [x] Add draft saving.
+- [x] Show validation errors and handle version conflicts.
+- [x] Phase complete: users can edit and reload a saved graph, see validation errors, and handle conflicting edits safely.
 
-Verification: Pending.
+Authorized and verified 2026-10-10:
+
+- Added a lazy-loaded React Flow canvas, seven node types, named branch handles,
+  node settings, eligible member/team choices, connection forms, deletion,
+  pan/zoom/minimap, persisted positions, responsive layout and advanced JSON.
+  Per-workflow Zustand state shares one draft between visual and JSON editors.
+- Reused M4 APIs for saving, validation, immutable publication and cloning.
+  Conflicts preserve local edits, block stale saves and require explicit reload;
+  failed saves preserve edits. Backend permissions, tenant boundaries, CSRF,
+  auditing, limits and revision checks remain in force. No migration needed.
+- Frontend lint/type checking, all 27 unit/component tests, normal production
+  build and all 7 Edge browser scenarios passed. Browser acceptance verifies
+  real dragging and handle connections, branch validation, saved configuration
+  and positions, deletion, two-tab conflicts, publication and mobile width.
+  Desktop/mobile screenshots were inspected; a minimap dimension bug was fixed
+  and covered by the final passing run. Test servers shut down cleanly.
+- All 34 backend graph-validation tests and 22 real-infrastructure workflow
+  integration tests passed. The integration run had one harmless pytest cache
+  directory warning; all assertions passed. No backend source/API changes.
+- Initial frontend checks caught callback/test typing issues, missing jsdom
+  ResizeObserver and dropdown test locators; these were corrected before final
+  acceptance. Clean npm ci passed after retrying Windows directory cleanup.
+- See [M5 purpose and testing guide](docs/18_VISUAL_BUILDER_IMPLEMENTATION.md).
+  Remote GitHub CI was not rerun. M6 and all execution features remain unstarted.
 
 ## M6 - Execution persistence
 

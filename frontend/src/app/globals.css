@@ -47,3 +47,57 @@ button:disabled { opacity: .55; cursor: wait; }
 .auth-error li { margin: .5rem 0; overflow-wrap: anywhere; }
 .auth-error small { display: block; }
 .org-actions [aria-pressed="true"] { background: #e0f2ef; border-color: #0f766e; }
+
+.workflow-shell { max-width: 90rem; }
+.workflow-shell .auth-card { min-width: 0; }
+.workflow-builder { margin: 1.5rem 0; }
+.builder-intro { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.builder-intro h3 { font-size: 1.3rem; font-weight: 700; margin: .3rem 0; }
+.builder-badge { background: #e0f2ef; color: #065f46; border-radius: 2rem; padding: .4rem .8rem; white-space: nowrap; font-size: .8rem; }
+.builder-hint { font-size: .85rem; color: #486270; }
+.builder-palette { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.builder-palette button { background: #f7fafb; font-size: .8rem; padding: .6rem .75rem; }
+.builder-palette span { color: #0f766e; margin-right: .3rem; }
+.builder-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; border: 1px solid #cbd8de; border-radius: .75rem; overflow: hidden; }
+.builder-canvas { height: 36rem; position: relative; min-width: 0; background: #f5f8fa; }
+.builder-empty { position: absolute; top: 42%; left: 15%; width: 70%; text-align: center; color: #486270; pointer-events: none; }
+.builder-properties { min-width: 0; padding: 1.25rem; border-left: 1px solid #cbd8de; max-height: 36rem; overflow-y: auto; overflow-wrap: anywhere; }
+.builder-properties h3 { font-size: 1rem; font-weight: 700; }
+.builder-properties label { margin: .8rem 0; font-size: .8rem; }
+.builder-properties input, .builder-properties select, .builder-properties textarea { font-size: .85rem; padding: .55rem; box-sizing: border-box; }
+.builder-properties textarea { display: block; width: 100%; border: 1px solid #91a6ae; border-radius: .5rem; margin-top: .5rem; }
+.builder-properties fieldset { min-width: 0; }
+.builder-coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.builder-node-list { display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0; }
+.builder-node-list button { font-size: .8rem; padding: .35rem .7rem; max-width: 100%; overflow-wrap: anywhere; }
+.builder-node-list [aria-pressed="true"] { background: #e0f2ef; border-color: #0f766e; }
+.builder-json, .builder-connections { margin: 1rem 0; border-top: 1px solid #dbe4e8; padding-top: 1rem; }
+.builder-json summary, .builder-connections summary { cursor: pointer; font-weight: 600; }
+.builder-connect-form { display: grid; grid-template-columns: 1fr .8fr 1fr auto; align-items: end; gap: .75rem; }
+.builder-connect-form label { min-width: 0; margin: 1rem 0; }
+.builder-connect-form button { margin-bottom: 1rem; }
+.builder-connections li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .5rem 0; overflow-wrap: anywhere; }
+.workflow-node { width: 185px; padding: 1rem; border: 1px solid #91a6ae; border-left: 4px solid #0f766e; border-radius: .7rem; background: #fff; box-shadow: 0 3px 12px #152b3510; }
+.workflow-node strong { display: block; font-size: .95rem; overflow-wrap: anywhere; margin: .4rem 0; }
+.node-kind { font-size: .7rem; font-weight: 700; color: #486270; text-transform: uppercase; letter-spacing: .04em; }
+.node-condition { border-left-color: #b7791f; }
+.node-approval { border-left-color: #7c3aed; }
+.node-end { border-left-color: #486270; }
+.node-outputs { display: flex; justify-content: flex-end; gap: .6rem; font-size: .65rem; color: #486270; }
+.workflow-node.is-selected { outline: 2px solid #0f766e; outline-offset: 3px; }
+.workflow-node.is-invalid { border-color: #be123c; }
+.node-error { color: #be123c; display: block; font-size: .7rem; }
+.workflow-node .react-flow__handle { width: 12px; height: 12px; background: #0f766e; border: 2px solid white; }
+.builder-canvas .react-flow__controls button { border-radius: 0; padding: 5px; }
+@media (max-width: 1000px) {
+  .builder-workspace { grid-template-columns: minmax(0, 1fr); }
+  .builder-properties { border-left: 0; border-top: 1px solid #cbd8de; max-height: none; }
+  .builder-canvas { height: 28rem; }
+  .builder-connect-form { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (max-width: 480px) {
+  .workflow-shell .auth-card { padding: 1rem; }
+  .builder-intro { align-items: flex-start; flex-direction: column; }
+  .builder-palette button { flex: 1 0 40%; }
+  .builder-canvas .react-flow__minimap { display: none; }
+}
