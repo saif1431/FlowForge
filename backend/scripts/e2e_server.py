@@ -20,7 +20,8 @@ from app.modules.auth.service import authenticate, consume_token, issue_token
 
 settings = SmokeSettings(
     app_env="test",
-    trusted_origins=["http://127.0.0.1:3100"],
+    require_email_verification=False,
+    trusted_origins=["http://127.0.0.1:3100", "http://localhost:3100"],
     rate_limit_prefix=f"flowforge:e2e:{uuid4().hex}",
 )
 app = create_app(settings)
@@ -81,6 +82,15 @@ async def verify_test_email(request: Request, db: Database) -> None:
     token = await issue_token(db, user.id, "verify_email", str(uuid4()))
     await db.commit()
     await consume_token(db, token, "verify_email", str(uuid4()))
+
+
+@app.post("/__test__/reset-rate-limits", status_code=204)
+async def reset_test_rate_limits(request: Request) -> None:
+    # Sequential browser scenarios share loopback IP; isolate their counters without
+    # disabling limits within a scenario or touching application/other-run keys.
+    redis = request.app.state.redis
+    async for key in redis.scan_iter(match=f"{settings.rate_limit_prefix}:*"):
+        await redis.delete(key)
 
 
 if __name__ == "__main__":

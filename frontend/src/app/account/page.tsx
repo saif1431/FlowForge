@@ -76,8 +76,8 @@ export default function AccountPage() {
           <h1>Your account</h1>
           <nav className="auth-links"><Link href="/organizations">Your organizations</Link></nav>
           <p className="account-email">{user.email}</p>
-          <p>{user.email_verified_at ? "Email verified" : "Email not verified"}</p>
-          {!user.email_verified_at && <><p>Email verification delivery is not available yet.</p><button disabled={busy} onClick={() => void action("/request-verification")}>Request verification</button></>}
+          {user.email_verification_required !== false && <p>{user.email_verified_at ? "Email verified" : "Email not verified"}</p>}
+          {user.email_verification_required !== false && !user.email_verified_at && <><p>Email verification delivery is not available yet.</p><button disabled={busy} onClick={() => void action("/request-verification")}>Request verification</button></>}
         </section>
         <section className="auth-card" aria-labelledby="sessions-title">
           <h2 id="sessions-title">Active sessions</h2>

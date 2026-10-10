@@ -29,7 +29,9 @@ HEADERS = {"Origin": "http://127.0.0.1:3000", "X-CSRF-Protection": "1"}
 
 @pytest.fixture
 async def auth_env() -> AsyncIterator[tuple[httpx.AsyncClient, AsyncEngine, SmokeSettings]]:
-    settings = SmokeSettings(rate_limit_prefix=f"flowforge:test:{uuid4().hex}")
+    settings = SmokeSettings(
+        rate_limit_prefix=f"flowforge:test:{uuid4().hex}", require_email_verification=True
+    )
     schema = f"test_auth_{uuid4().hex}"
     admin = create_async_engine(settings.database_url.get_secret_value(), hide_parameters=True)
     async with admin.begin() as conn:
@@ -101,7 +103,18 @@ async def test_registration_login_and_redaction(
 ) -> None:
     client, engine, _ = auth_env
     await signup(client, "Alice@Example.com")
-    await signup(client)
+    duplicate = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "ALICE@example.com", "password": "a different password 456!"},
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "EMAIL_ALREADY_REGISTERED"
+    assert (
+        await client.post(
+            "/api/v1/auth/login",
+            json={"email": "alice@example.com", "password": "a different password 456!"},
+        )
+    ).status_code == 401
     raw = await signin(client)
     me = await client.get("/api/v1/auth/me")
     assert me.json()["email"] == "alice@example.com"
@@ -315,7 +328,7 @@ async def test_concurrent_registration(
             for _ in range(2)
         ]
     )
-    assert all(reply.status_code == 202 for reply in replies)
+    assert sorted(reply.status_code for reply in replies) == [202, 409]
     async with async_sessionmaker(engine)() as db:
         assert await db.scalar(select(func.count()).select_from(User)) == 1
 

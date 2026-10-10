@@ -37,6 +37,7 @@ class UserOutput(BaseModel):
     id: UUID
     email: str
     email_verified_at: datetime | None
+    email_verification_required: bool = True
     created_at: datetime
 
 

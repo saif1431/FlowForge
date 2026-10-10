@@ -276,6 +276,36 @@ async def test_approval_references_validated_again_at_publication(auth_env: Env)
     assert (await publish(client, base, saved, owner)).status_code == 200
 
 
+async def test_foreign_approval_assignees_cannot_publish(auth_env: Env) -> None:
+    client, _, _ = auth_env
+    owner = await account(auth_env)
+    foreign_org = await organization(client)
+    foreign_member = (await client.get(f"/api/v1/organizations/{foreign_org}/members")).json()[
+        "items"
+    ][0]["id"]
+    foreign_team = await team(client, foreign_org, owner)
+    assert (
+        await client.post(
+            f"/api/v1/organizations/{foreign_org}/teams/{foreign_team}/members",
+            json={"membership_id": foreign_member},
+        )
+    ).status_code == 204
+    org = await organization(client)
+    base, draft = await create(client, org)
+    for kind, assignee_id in (("member", foreign_member), ("team", foreign_team)):
+        saved = await save(
+            client, base, draft, graph("approval", {"assignee": {"kind": kind, "id": assignee_id}})
+        )
+        assert saved.status_code == 200
+        draft = saved.json()
+        response = await publish(client, base, draft)
+        assert response.status_code == 422
+        assert "APPROVER_UNAVAILABLE" in {
+            issue["code"] for issue in response.json()["error"]["details"]["issues"]
+        }
+        assert (await client.get(f"{base}/versions/{draft['id']}")).json() == draft
+
+
 @pytest.mark.parametrize(
     "statement",
     [
@@ -285,8 +315,10 @@ async def test_approval_references_validated_again_at_publication(auth_env: Env)
         "DELETE FROM workflow_nodes WHERE version_id = :version",
         "UPDATE workflow_edges SET branch = 'false' WHERE version_id = :version",
         "DELETE FROM workflow_edges WHERE version_id = :version",
-        "INSERT INTO workflow_nodes SELECT version_id, :new_id, organization_id, kind, label, config, position_x, position_y FROM workflow_nodes WHERE version_id = :version LIMIT 1",
-        "INSERT INTO workflow_edges SELECT version_id, :new_id, organization_id, source, target, branch FROM workflow_edges WHERE version_id = :version LIMIT 1",
+        "INSERT INTO workflow_nodes SELECT version_id, :new_id, organization_id, kind, label, "
+        "config, position_x, position_y FROM workflow_nodes WHERE version_id = :version LIMIT 1",
+        "INSERT INTO workflow_edges SELECT version_id, :new_id, organization_id, source, target, "
+        "branch FROM workflow_edges WHERE version_id = :version LIMIT 1",
     ],
 )
 async def test_database_rejects_direct_published_mutation(auth_env: Env, statement: str) -> None:

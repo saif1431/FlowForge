@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const api = "http://127.0.0.1:8100/api/v1";
 const headers = { Origin: "http://127.0.0.1:3100", "X-CSRF-Protection": "1" };

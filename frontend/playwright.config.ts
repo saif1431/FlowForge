@@ -19,11 +19,11 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "npm run dev -- --port 3100",
+      command: "npm run build && npm run start -- --port 3100",
       url: "http://127.0.0.1:3100",
       env: { E2E_TEST: "1", NEXT_PUBLIC_API_URL: "http://127.0.0.1:8100", NEXT_TELEMETRY_DISABLED: "1" },
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: 180_000,
     },
   ],
 });

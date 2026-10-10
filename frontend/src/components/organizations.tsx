@@ -39,7 +39,7 @@ export default function Organizations({ orgId, view = "members" }: { orgId?: str
       const person = await apiRequest<User>("/auth/me");
       if (!active.current || current !== generation.current) return;
       setUser(person);
-      if (!person.email_verified_at) { setLoading(false); return; }
+      if (person.email_verification_required !== false && !person.email_verified_at) { setLoading(false); return; }
       const organizations = await apiRequest<OrgList>("/organizations");
       const selected = orgId ? await apiRequest<Org>(`/organizations/${orgId}`) : null;
       const effective = orgId ? await apiRequest<Access>(`/organizations/${orgId}/access`) : null;
@@ -115,7 +115,7 @@ export default function Organizations({ orgId, view = "members" }: { orgId?: str
     <header className="account-header"><Link className="brand" href="/organizations">FlowForge</Link><Link href="/account">Your account</Link></header>
     {error && <div className="auth-error" role="alert">{error} <button onClick={() => void load()}>Try again</button></div>}
     {message && <p className="auth-success" role="status">{message}</p>}
-    {loading ? <p role="status">Loading organizations…</p> : user && !user.email_verified_at ?
+    {loading ? <p role="status">Loading organizations…</p> : user && user.email_verification_required !== false && !user.email_verified_at ?
       <section className="auth-card"><h1>Verify your email</h1><p>Verify your email before creating an organization or responding to invitations.</p><Link href="/account">Go to your account</Link></section> : user && <>
       <section className="auth-card">
         <h1>{org ? org.name : "Your organizations"}</h1>

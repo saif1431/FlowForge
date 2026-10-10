@@ -2,7 +2,7 @@
 
 FlowForge is a multi-tenant SaaS platform for designing, publishing, executing, monitoring, approving, and auditing internal business workflows.
 
-This repository contains **M0 bootstrap, M1 authentication, M2 organizations, and M3 roles and teams**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, role-based authorization, teams, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
+This repository contains **M0 bootstrap through M4 workflow definitions and versioning**: a Next.js frontend, FastAPI API, PostgreSQL-backed sessions, tenant-scoped organizations/memberships/invitations, role-based authorization, teams, workflow drafts and immutable published versions, local infrastructure, migrations, and automated checks. Later business features remain separate milestones. The files in `/docs` remain the source of truth for architecture, scope, engineering constraints, and implementation planning.
 
 ## Product idea
 
@@ -112,9 +112,15 @@ npm.cmd run dev
 ```
 
 Open `http://127.0.0.1:3000`. API documentation is at `http://127.0.0.1:8000/docs`.
-Use `/register`, `/login`, and `/account` for registration, login, and session management. Use the same host spelling (`127.0.0.1`) for both applications. `NEXT_PUBLIC_API_URL` defaults to `http://127.0.0.1:8000`; backend `TRUSTED_ORIGINS` defaults to `["http://127.0.0.1:3000"]`. Set both when changing origins. Verification/password-reset foundations exist; email delivery arrives in M12. See [M1 authentication](docs/13_AUTH_IMPLEMENTATION.md) for local testing links and the full contract.
+Use `/register`, `/login`, and `/account` for registration, login, and session management. Both `http://localhost:3000` and `http://127.0.0.1:3000` are supported. For loopback API targets, the frontend proxies `/api/v1/*` to `NEXT_PUBLIC_API_URL` (default `http://127.0.0.1:8000`), so browser cookies stay on the host you opened. Sessions are separate between the two hostnames, but accounts share the same database. Backend `TRUSTED_ORIGINS` defaults to `["http://127.0.0.1:3000","http://localhost:3000"]`; add both to an existing explicit override. Restart both servers after changing configuration. Remote API targets still use explicit credentialed CORS and trusted origins. Verification/password-reset foundations exist; email delivery arrives in M12. See [M1 authentication](docs/13_AUTH_IMPLEMENTATION.md) for local testing links and the full contract.
 
-Open `/organizations` after verifying your email to create/switch organizations and respond to invitations. Owners and Admins manage members and invitations at `/app/[org]/members`; only Owners can appoint or remove Admins. Browse and manage teams at `/app/[org]/teams`. Each membership has one fixed role; teams do not grant permissions. Invitations appear in the recipient's account; email delivery remains M12. Use the local verification helper until delivery is implemented. See [M2 organizations](docs/14_ORGANIZATIONS_IMPLEMENTATION.md) for the invitation lifecycle and [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for current access policy and API details.
+An email address can have only one account (case-insensitive). Registration now returns `409 EMAIL_ALREADY_REGISTERED` for an existing address instead of a success-like response. It never replaces the original password. For an existing local account whose password is unknown, run `uv run --locked python -m scripts.local_auth_token --email YOUR_EMAIL --purpose reset_password` from `backend/`, open the printed link, and choose a new password of 15–128 characters. Keep the link private. No existing accounts or passwords are changed by the localhost/registration fix.
+
+Local development sets `REQUIRE_EMAIL_VERIFICATION=false` in `backend/.env`, so existing and new signed-in accounts can open organizations immediately; verification prompts are hidden. Restart both servers after changing this setting. Staging/production require it to be `true`. Actual verification timestamps remain unchanged.
+
+Open `/organizations` after signing in to create/switch organizations and respond to invitations. Owners and Admins manage members and invitations at `/app/[org]/members`; only Owners can appoint or remove Admins. Browse and manage teams at `/app/[org]/teams`. Each membership has one fixed role; teams do not grant permissions. Invitations appear in the recipient's account; email delivery remains M12. Use the local verification helper until delivery is implemented. See [M2 organizations](docs/14_ORGANIZATIONS_IMPLEMENTATION.md) for the invitation lifecycle and [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for current access policy and API details.
+
+Open **Workflows** from an organization's navigation, or visit `/app/[org]/workflows`, to create workflows, edit a draft graph as JSON, validate, publish, and create a new draft from a published version. Use **Load example graph → Save draft → Validate saved graph → Publish version** for a first test. Owners/Admins can publish; Designers can create/edit; other roles can read. Published graphs remain immutable and stale edits receive a conflict. The visual builder is M5; execution comes later. See [M4 workflow definitions and versioning](docs/17_WORKFLOWS_IMPLEMENTATION.md) for file locations, configuration, API routes, startup commands, and manual/automated tests.
 
 Health endpoints are intentionally outside the `/api/v1` business prefix:
 
@@ -167,7 +173,7 @@ npx.cmd playwright install chromium
 npm.cmd run test:e2e
 ```
 
-To use installed Microsoft Edge instead of downloading Chromium, set `$env:E2E_BROWSER_CHANNEL = "msedge"` before the test command. The browser harness creates an isolated test schema and starts its own servers on ports 3100/8100.
+To use installed Microsoft Edge instead of downloading Chromium, set `$env:E2E_BROWSER_CHANNEL = "msedge"` before the test command. The browser harness creates an isolated test schema, builds a separate production frontend, and starts its own servers on ports 3100/8100. Each sequential scenario starts with fresh test-only rate-limit counters; application limits remain active.
 
 `typecheck` generates Next.js route types before invoking TypeScript, so it works on a fresh checkout.
 To serve the production build locally, run `npm.cmd start` after `build`.
@@ -175,7 +181,7 @@ Next.js linting is a separate CI check, following its [installation guidance](ht
 
 GitHub Actions defines these frontend/backend checks and starts isolated infrastructure with fresh
 credentials for integration tests. No remote CI run is implied by passing local commands.
-CI also checks migrations, generated API contracts, and browser authentication/organization/role/team flows.
+CI also checks migrations, generated API contracts, and browser authentication/organization/role/team/workflow flows.
 
 Stop application terminals with Ctrl+C. From the root, `docker compose stop` stops infrastructure
 while retaining containers and volumes; `docker compose down` removes containers and retains volumes.
@@ -201,5 +207,6 @@ Do not add `--volumes` unless you intend to delete local data.
 | `docs/14_ORGANIZATIONS_IMPLEMENTATION.md` | M2 organization access, invitations, tenant context, API, and verification |
 | `docs/15_M3_ROLE_MATRIX_PROPOSAL.md` | Selected M3 role matrix and resource policies |
 | `docs/16_ROLES_TEAMS_IMPLEMENTATION.md` | M3 roles, permissions, teams, API, migrations, and verification |
+| `docs/17_WORKFLOWS_IMPLEMENTATION.md` | M4 graph contract, version lifecycle, API, implementation locations, and testing guide |
 
 The PDF `FlowForge_Project_Scope.pdf` is a readable project brief for humans. The Markdown files are the implementation source of truth for the coding assistant.

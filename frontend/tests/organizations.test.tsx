@@ -41,3 +41,16 @@ test("switching tenants discards a late response from the previous tenant", asyn
   resolveOld({ id: "a", name: "Private old tenant", owner_user_id: "user" });
   await waitFor(() => expect(screen.queryByText("Private old tenant")).not.toBeInTheDocument());
 });
+
+
+test("verification-disabled accounts can open organizations without a verification prompt", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/auth/me") return { id: "user", email_verified_at: null, email_verification_required: false };
+    return { items: [], next_cursor: null };
+  });
+  render(<Organizations />);
+  expect(await screen.findByRole("heading", { name: "Your organizations" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "Verify your email" })).not.toBeInTheDocument();
+  expect(apiRequest).toHaveBeenCalledWith("/organizations");
+  expect(apiRequest).toHaveBeenCalledWith("/invitations");
+});

@@ -32,6 +32,13 @@ async def register(db: AsyncSession, email: str, password: str, request_id: str)
         await issue_token(db, user_id, "verify_email", request_id)
     else:
         audit(db, "auth.registration_declined", request_id)
+        await db.commit()
+        raise AuthError(
+            409,
+            "EMAIL_ALREADY_REGISTERED",
+            "An account with this email already exists. Sign in with your original password "
+            "or reset it. Registering again does not change your password.",
+        )
     await db.commit()
 
 

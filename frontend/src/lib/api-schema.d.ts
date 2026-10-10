@@ -1059,6 +1059,11 @@ export interface components {
             /** Email Verified At */
             email_verified_at: string | null;
             /**
+             * Email Verification Required
+             * @default true
+             */
+            email_verification_required: boolean;
+            /**
              * Created At
              * Format: date-time
              */
@@ -1293,6 +1298,15 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

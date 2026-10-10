@@ -1,7 +1,31 @@
 # FlowForge - Phase-by-phase TODO
 
-Latest completed phase: **M3 - COMPLETE** (verified 2026-10-06).
-Next phase: **M4 - NOT STARTED**; continuation is authorized, with graph/approval configuration decisions still required before implementation.
+Latest completed phase: **M4 - COMPLETE** (verified 2026-10-08).
+Next phase: **M5 - NOT STARTED**. Awaiting the owner's instruction to continue.
+
+Local verification follow-up (2026-10-10): at the owner's request, the existing
+backend `.env` and local bootstrap now set `REQUIRE_EMAIL_VERIFICATION=false`.
+The centralized tenant authentication dependency and frontend follow the same
+server policy. Existing and new accounts can use organizations/invitations/workflows
+without verification; stored verification timestamps remain unchanged. Account
+verification prompts are hidden. Staging/production reject the bypass. Verified
+19 backend organization/configuration tests, 22 frontend tests, Ruff/mypy,
+frontend lint/type checks, and all three auth browser tests against a production
+build, including unverified organization creation on both local hostnames.
+C: was full; test temporary files were redirected to the workspace on D:.
+
+
+Authentication follow-up (2026-10-10): owner requested localhost support and explicit
+duplicate-email rejection. Added local same-origin API proxying, trusted localhost
+origin (including the existing local configuration), and `409 EMAIL_ALREADY_REGISTERED`.
+Existing accounts/passwords are preserved; case-insensitive uniqueness and concurrent
+registration are enforced by the existing database constraint. Updated API contracts
+and README. Verified 19 backend auth/configuration tests, 21 frontend tests,
+Ruff lint/format, mypy, frontend lint/type checking and production browser build.
+All six browser scenarios passed across the main run and the focused organization
+rerun after updating its response matcher for the proxy. Both hostnames cover
+registration, cross-host duplicate rejection, original-password login, persisted
+HttpOnly sessions and logout. Restart both local application servers to use the fix.
 
 This checklist follows [the approved roadmap](docs/12_INITIAL_ROADMAP.md). Build one task at a time within one phase. Existing setup files are not proof that acceptance checks have passed; checked boxes require recorded verification.
 
@@ -103,20 +127,29 @@ Verification (2026-10-06):
 - Frontend lint/type checks, all 12 component tests, and the final production build passed. All four Edge browser scenarios passed: the three existing scenarios in the full run and the M3 scenario in a focused rerun after correcting select labels. M3 covers Admin appointment, persisted team management, demotion rejecting an open-page write, read-only access, deletion, and a narrow screen. Both test-server ports were closed after cleanup.
 - OpenAPI and TypeScript contracts regenerated without drift. CI includes the new tests; remote CI was not run. See [M3 roles and teams](docs/16_ROLES_TEAMS_IMPLEMENTATION.md) for the delivered contract.
 
-The initial source audit found M3 unimplemented; that gap is now resolved. M4 is next, and the owner's earlier continuation instruction remains recorded. Its graph/approval configuration decision is still open.
+The initial M3 source audit found M3 unimplemented; that gap was resolved. M4 completion and its retained definition semantics are recorded below.
 
 ## M4 - Workflow definitions and versioning
 
-Status: NOT STARTED
+Status: COMPLETE
 
-- [ ] Obtain decisions on graph and approval configuration semantics.
-- [ ] Add workflows and workflow versions.
-- [ ] Add nodes, edges, and graph validation.
-- [ ] Add draft creation and editing.
-- [ ] Add publication and immutable published versions.
-- [ ] Phase complete: valid drafts publish, invalid graphs are rejected, and published versions cannot be modified.
+- [x] Document retained graph and approval configuration semantics from the existing implementation.
+- [x] Add workflows and workflow versions.
+- [x] Add nodes, edges, and graph validation.
+- [x] Add draft creation and editing.
+- [x] Add publication and immutable published versions.
+- [x] Phase complete: valid drafts publish, invalid graphs are rejected, and published versions cannot be modified.
 
-Verification: Pending.
+The owner requested M4 implementation on 2026-10-08. The initial audit found the feature code already present in the checked-in tree while the documentation still said NOT STARTED. This pass retains that implementation's DAG, explicit branch, single-draft and approval configuration choices; it does not introduce runtime execution semantics. See [M4 implementation and testing](docs/17_WORKFLOWS_IMPLEMENTATION.md).
+
+Verification (2026-10-08):
+
+- All 112 backend tests passed: 51 unit tests, the full 60-test integration run, and the added cross-organization approval regression (61 integration cases total). Coverage includes invalid graphs, snapshot immutability through API and direct SQL, roles, tenant/version substitution, concurrent saves/publication/cloning, audit writes, CSRF, limits, redaction and M3-preserving migrations.
+- Ruff lint/format and mypy passed. Local migration is `0004_workflows`; Alembic reports no drift. All five infrastructure smoke checks passed. OpenAPI/TypeScript regeneration produced no contract changes.
+- Frontend lint/type checks, all 18 component tests and production build passed. Two initial component timeouts under concurrent load passed when rerun with `--maxWorkers=1`.
+- All five Edge browser scenarios passed together against the isolated production build. M4 verifies invalid publication, persisted drafts, read-only publication, cloning, unchanged history, two-tab revision conflicts and mobile width. Test servers shut down cleanly.
+- Fixed cross-scenario Redis counter interference in the loopback-only browser harness; application limits remain unchanged. Browser tests now build/serve production output after intermittent development-server navigation 404s. The complete production suite passed; the development-only flake is not claimed to be fixed in Next.js.
+- Added the M4 testing guide, updated README/roadmap/checklist and CI labels, and made the new guide Git-visible while keeping existing documentation ignore policy. Remote CI was not run. M5 and execution milestones remain NOT STARTED.
 
 ## M5 - Visual workflow builder
 

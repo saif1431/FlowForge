@@ -19,5 +19,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-/docs
+/docs/*
+!/docs/17_WORKFLOWS_IMPLEMENTATION.md
 /CODEX_MASTER_PROMPT.md

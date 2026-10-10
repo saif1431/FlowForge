@@ -18,6 +18,7 @@ def main() -> None:
         f"RABBITMQ_DEFAULT_PASS={rabbit}\nMINIO_ROOT_USER=flowforge\n"
         f"MINIO_ROOT_PASSWORD={minio}\n",
         "APP_ENV=local\n"
+        "REQUIRE_EMAIL_VERIFICATION=false\n"
         f"DATABASE_URL=postgresql+asyncpg://flowforge:{postgres}@127.0.0.1:15432/flowforge\n"
         f"REDIS_URL=redis://:{redis}@127.0.0.1:6379/0\n"
         f"RABBITMQ_URL=amqp://flowforge:{rabbit}@127.0.0.1:5672//\n"

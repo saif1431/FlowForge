@@ -12,10 +12,11 @@ class Settings(BaseSettings):
     database_url: SecretStr
     dependency_timeout_seconds: float = Field(default=3, gt=0, le=10)
     redis_url: SecretStr | None = None
-    trusted_origins: list[str] = ["http://127.0.0.1:3000"]
+    trusted_origins: list[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
     session_absolute_seconds: int = Field(default=604800, ge=60, le=2592000)
     session_idle_seconds: int = Field(default=86400, ge=60, le=604800)
     rate_limit_prefix: str = "flowforge:auth"
+    require_email_verification: bool = True
 
     @field_validator("trusted_origins")
     @classmethod
@@ -42,6 +43,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def production_auth(self) -> Settings:
         if self.app_env in {"staging", "production"}:
+            if not self.require_email_verification:
+                raise ValueError("Email verification is required outside local/test environments")
             if self.redis_url is None or any(
                 not origin.startswith("https://") for origin in self.trusted_origins
             ):

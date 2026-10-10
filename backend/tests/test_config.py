@@ -30,3 +30,13 @@ def test_settings_representation_hides_database_secret(settings: Settings) -> No
 def test_timeout_must_be_bounded(settings: Settings, timeout: float) -> None:
     with pytest.raises(ValidationError):
         Settings.model_validate({**settings.model_dump(), "dependency_timeout_seconds": timeout})
+
+
+@pytest.mark.parametrize("environment", ["staging", "production"])
+def test_deployed_environments_cannot_disable_email_verification(
+    settings: Settings, environment: str
+) -> None:
+    with pytest.raises(ValidationError, match="Email verification is required"):
+        Settings.model_validate(
+            {**settings.model_dump(), "app_env": environment, "require_email_verification": False}
+        )

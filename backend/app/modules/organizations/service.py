@@ -21,11 +21,6 @@ from app.modules.organizations.schemas import (
 from app.modules.roles.authorization import manage_member, require
 
 
-def verified(user: User) -> None:
-    if user.email_verified_at is None:
-        raise AuthError(403, "EMAIL_NOT_VERIFIED", "Verify your email before using organizations.")
-
-
 def audit(
     db: AsyncSession,
     user: User,
@@ -48,7 +43,6 @@ def audit(
 
 
 async def create(db: AsyncSession, user: User, name: str, request_id: str) -> OrganizationOutput:
-    verified(user)
     org = Organization(name=name, owner_user_id=user.id)
     db.add(org)
     await db.flush()
@@ -199,7 +193,6 @@ async def invitations(
 ) -> InvitationList:
     query = select(Invitation, Organization).join(Organization)
     if tenant is None:
-        verified(user)
         # Explicit identity scope for recipients who are not members yet.
         query = query.where(Invitation.email == user.email)
     else:
@@ -248,7 +241,6 @@ async def respond(
     action: Literal["accept", "decline"],
     request_id: str,
 ) -> InvitationOutput:
-    verified(user)
     org_id = await db.scalar(
         select(Invitation.organization_id).where(
             Invitation.id == invitation_id,

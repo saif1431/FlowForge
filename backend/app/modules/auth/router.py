@@ -40,12 +40,12 @@ def clear_cookie(response: Response, request: Request) -> None:
     )
 
 
-@router.post("/register", status_code=202)
+@router.post("/register", status_code=202, responses={409: {"model": ErrorEnvelope}})
 async def register(body: RegisterInput, request: Request, db: Database) -> Message:
     await service.register(
         db, body.email, body.password.get_secret_value(), request.state.request_id
     )
-    return Message(message="Registration received. You can now try signing in.")
+    return Message(message="Account created. Sign in with the email and password you just entered.")
 
 
 @router.post("/login")
@@ -64,7 +64,9 @@ async def login(body: LoginInput, request: Request, response: Response, db: Data
         samesite="lax",
         path="/",
     )
-    return UserOutput.model_validate(user)
+    return UserOutput.model_validate(user).model_copy(
+        update={"email_verification_required": settings.require_email_verification}
+    )
 
 
 @router.get("/me")
@@ -72,7 +74,9 @@ async def me(request: Request, db: Database) -> UserOutput:
     settings = config(request)
     user, _ = await service.authenticate(db, request.cookies.get(settings.session_cookie), settings)
     await db.commit()
-    return UserOutput.model_validate(user)
+    return UserOutput.model_validate(user).model_copy(
+        update={"email_verification_required": settings.require_email_verification}
+    )
 
 
 @router.get("/sessions")

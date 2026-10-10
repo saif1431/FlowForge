@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from app.db.models import User
 from app.modules.auth.dependencies import Database, config, limit, protect
+from app.modules.auth.errors import AuthError
 from app.modules.auth.schemas import EmailInput, ErrorEnvelope
 from app.modules.auth.service import authenticate
 from app.modules.organizations import repository, service
@@ -30,6 +31,8 @@ router = APIRouter(
 async def current_user(request: Request, db: Database) -> User:
     settings = config(request)
     user, _ = await authenticate(db, request.cookies.get(settings.session_cookie), settings)
+    if settings.require_email_verification and user.email_verified_at is None:
+        raise AuthError(403, "EMAIL_NOT_VERIFIED", "Verify your email before using organizations.")
     await limit(request, "organizations:user", str(user.id), 120, 60)
     return user
 
@@ -39,7 +42,6 @@ Page = Annotated[PageInput, Query()]
 
 
 async def context(org_id: UUID, db: Database, user: CurrentUser) -> repository.TenantContext:
-    service.verified(user)
     return await repository.resolve(db, org_id, user.id)
 
 
@@ -56,7 +58,6 @@ async def create(
 
 @router.get("/organizations")
 async def list_organizations(db: Database, user: CurrentUser, page: Page) -> OrganizationList:
-    service.verified(user)
     return await service.organizations(db, user, page)
 
 

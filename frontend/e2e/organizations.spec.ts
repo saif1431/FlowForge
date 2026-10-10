@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const api = "http://127.0.0.1:8100";
 const headers = { Origin: "http://127.0.0.1:3100", "X-CSRF-Protection": "1" };
@@ -18,7 +19,7 @@ test("create, switch, invite, join, remove and reject a foreign tenant", async (
     await account(context, `owner-${Date.now()}@example.com`);
     await page.goto("/organizations");
     await page.getByLabel("Organization name").fill("Design Studio");
-    const created = page.waitForResponse((response) => response.url() === `${api}/api/v1/organizations` && response.request().method() === "POST");
+    const created = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/organizations" && response.request().method() === "POST");
     await page.getByRole("button", { name: "Create organization", exact: true }).click();
     expect((await created).status()).toBe(201);
     await expect(page.getByRole("heading", { name: "Design Studio", exact: true })).toBeVisible({ timeout: 20_000 });

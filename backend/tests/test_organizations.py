@@ -342,3 +342,30 @@ async def test_m2_upgrade_preserves_m1_accounts_and_sessions(auth_env: Env) -> N
         await conn.run_sync(migrate)
     assert (await client.get("/api/v1/auth/me")).json() == before
     await organization(client)
+
+
+async def test_local_verification_disabled_allows_organization_and_invitation_access(
+    auth_env: Env,
+) -> None:
+    client, _, settings = auth_env
+    settings.require_email_verification = False
+    await account(auth_env, verified=False)
+    me = (await client.get("/api/v1/auth/me")).json()
+    assert me["email_verified_at"] is None
+    assert me["email_verification_required"] is False
+    org = await organization(client)
+    assert (await client.get(f"/api/v1/organizations/{org}")).status_code == 200
+    assert (await client.get(f"/api/v1/organizations/{org}/workflows")).status_code == 200
+    invited = await client.post(
+        f"/api/v1/organizations/{org}/invitations", json={"email": "local-invitee@example.com"}
+    )
+    assert invited.status_code == 201
+    await account(auth_env, "local-invitee@example.com", verified=False)
+    assert (await client.get("/api/v1/invitations")).status_code == 200
+    assert (
+        await client.post(f"/api/v1/invitations/{invited.json()['id']}/accept")
+    ).status_code == 200
+    assert (await client.get(f"/api/v1/organizations/{org}")).status_code == 200
+    assert (await client.get("/api/v1/auth/me")).json()["email_verified_at"] is None
+    settings.require_email_verification = True
+    assert (await client.get(f"/api/v1/organizations/{org}")).status_code == 403
